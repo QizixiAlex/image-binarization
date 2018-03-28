@@ -4,6 +4,7 @@ import com.google.zxing.NotFoundException;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
+import com.google.zxing.common.GlobalHistogramBinarizer;
 import com.google.zxing.common.HybridBinarizer;
 
 import javax.imageio.ImageIO;
@@ -24,19 +25,35 @@ public class Main {
     public static void main(String[] args) {
         String inputDirectory = "src\\main\\resources\\input_images\\";
         String outputDirectory = "src\\main\\resources\\output_images\\";
-        List<String> filenames = new ArrayList<>(Arrays.asList("sample1.tiff","sample2.tiff","1.png",
-                "2.png","3.png","4.png"));
+        String outputDirectoryZxing = "src\\main\\resources\\output_images_zxing\\";
+        //List<String> filenames = new ArrayList<>(Arrays.asList("1.png","2.png","3.png","4.png","sample6.jpg","sample7.jpg","sample1.jpg","sample2.jpg","sample3.jpg"));
+        //List<String> filenames = new ArrayList<>(Arrays.asList("sample6.jpg"));
+        List<String> filenames = new ArrayList<>();
+        for (int i=1;i<=26;i++){
+            filenames.add(String.format("%d.jpg",i));
+        }
         for (int i=0;i<filenames.size();i++){
             String filename = filenames.get(i);
             String inputFilePath = inputDirectory + filename;
             String outputFilePath = outputDirectory + filename;
+            String outputFilePathZxing = outputDirectoryZxing + filename;
             File imageFile = new File(inputFilePath);
             try {
                 BufferedImage bufferedImage = ImageIO.read(imageFile);
-                BitMatrix bitMatrix = binarizeImage(bufferedImage);
+                BitMatrix bitMatrix = binarizeImageZxing(bufferedImage);
                 String imageFormat = getExtension(filename);
-                Path path = Paths.get(outputFilePath);
+                Path path = Paths.get(outputFilePathZxing);
                 MatrixToImageWriter.writeToPath(bitMatrix,imageFormat,path);
+            } catch (IOException | NotFoundException e) {
+                e.printStackTrace();
+            }
+            try {
+                BufferedImage bufferedImage = ImageIO.read(imageFile);
+                System.out.println(filename);
+                BufferedImage outputImage = binarizeImage(bufferedImage);
+                String imageFormat = getExtension(filename);
+                File outputFile = new File(outputFilePath);
+                ImageIO.write(outputImage,imageFormat,outputFile);
             } catch (IOException | NotFoundException e) {
                 e.printStackTrace();
             }
@@ -52,9 +69,15 @@ public class Main {
          return extension;
     }
 
-    private static BitMatrix binarizeImage(BufferedImage image) throws NotFoundException {
+    private static BitMatrix binarizeImageZxing(BufferedImage image) throws NotFoundException {
         LuminanceSource source = new BufferedImageLuminanceSource(image);
-        Binarizer binarizer = new AdaptiveBinarizer(source);
+        //Binarizer binarizer = new AdaptiveBinarizer(source);
+        //Binarizer binarizer = new GlobalHistogramBinarizer(source);
+        Binarizer binarizer = new HybridBinarizer(source);
         return binarizer.getBlackMatrix();
+    }
+    private static BufferedImage binarizeImage(BufferedImage image) throws NotFoundException {
+        HybridClusteringBinarizer binarizer = new HybridClusteringBinarizer(image);
+        return binarizer.getBufferedImage();
     }
 }
